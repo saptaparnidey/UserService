@@ -1,5 +1,6 @@
 package org.example.userservice.controller;
 
+import org.antlr.v4.runtime.misc.Pair;
 import org.example.userservice.dto.LoginRequestDto;
 import org.example.userservice.dto.SignupRequestDto;
 import org.example.userservice.dto.UserDto;
@@ -8,6 +9,7 @@ import org.example.userservice.service.AuthService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.util.MultiValueMap;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
@@ -28,9 +30,9 @@ public class AuthController {
     @PostMapping("/auth/login")
     public ResponseEntity<UserDto> login(@RequestBody LoginRequestDto loginRequestDto){
         try{
-            User user = authService.login(loginRequestDto.getEmail(), loginRequestDto.getPassword());
-            UserDto userDto = getUserDto(user);
-            return new ResponseEntity<>(userDto, HttpStatus.OK);
+            Pair<User, MultiValueMap<String, String>> bodyWithHeaders = authService.login(loginRequestDto.getEmail(), loginRequestDto.getPassword());
+            UserDto userDto = getUserDto(bodyWithHeaders.a);
+            return new ResponseEntity<>(userDto, bodyWithHeaders.b, HttpStatus.OK);
         }
         catch (Exception e){
             return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
