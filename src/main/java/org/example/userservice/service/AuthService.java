@@ -1,5 +1,7 @@
 package org.example.userservice.service;
 
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.JwtParser;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.MacAlgorithm;
 import org.antlr.v4.runtime.misc.Pair;
@@ -31,6 +33,9 @@ public class AuthService {
 
     @Autowired
     SessionRepository sessionRepository;
+
+    @Autowired
+    private SecretKey secret;
 
     public User signUp(String email, String password){
         Optional<User> userOptional = userRepository.findByEmail(email);
@@ -78,12 +83,9 @@ public class AuthService {
         jwtData.put("email", user.getEmail());
         jwtData.put("roles", user.getRoles());
         long nowInMillis = System.currentTimeMillis();
-        jwtData.put("expiry", new Date(nowInMillis + 10000));
+        jwtData.put("expiry", new Date(nowInMillis + 100000000));
         jwtData.put("createdAt", new Date(nowInMillis));
 
-
-        MacAlgorithm algorithm = Jwts.SIG.HS256;
-        SecretKey secret = algorithm.key().build();
         String token = Jwts.builder().claims(jwtData).signWith(secret).compact();
 
         Session session = new Session();
@@ -98,5 +100,47 @@ public class AuthService {
 
 
         return new Pair<User, MultiValueMap<String,String>>(user, headers);
+    }
+
+    public Boolean validateToken(String token, Long userId){
+        Optional<Session> optionalSession = sessionRepository.findByTokenAndUser_Id(token, userId);
+
+        if (optionalSession.isEmpty()){
+            System.out.println("No Token or User Found");
+            return false;
+        }
+
+        Session session = optionalSession.get();
+
+        String storedToken = session.getToken();
+
+        JwtParser jwtParser = Jwts.parser().verifyWith(secret).build();
+        Claims claims = jwtParser.parseSignedClaims(storedToken).getPayload();
+
+        long nowInMillis = System.currentTimeMillis();
+        long tokenExpiry = (Long)claims.get("expiry");
+
+        if(nowInMillis > tokenExpiry) {
+            System.out.println(nowInMillis);
+            System.out.println(tokenExpiry);
+            System.out.println("Token has expired");
+            return false;
+        }
+
+        Optional<User> optionalUser = userRepository.findById(userId);
+        if(optionalUser.isEmpty()){
+            return false;
+        }
+
+        String email = optionalUser.get().getEmail();
+        if(!email.equals(claims.get("email"))) {
+            System.out.println(email);
+            System.out.println(claims.get("email"));
+            System.out.println(claims.get("User doesn't match"));
+            return false;
+        }
+
+        return true;
+
     }
 }

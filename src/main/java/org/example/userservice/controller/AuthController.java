@@ -4,6 +4,7 @@ import org.antlr.v4.runtime.misc.Pair;
 import org.example.userservice.dto.LoginRequestDto;
 import org.example.userservice.dto.SignupRequestDto;
 import org.example.userservice.dto.UserDto;
+import org.example.userservice.dto.ValidateRequestDto;
 import org.example.userservice.model.User;
 import org.example.userservice.service.AuthService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -38,6 +39,12 @@ public class AuthController {
             return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
         }
 
+    }
+
+    @PostMapping("/auth/validate")
+    public ResponseEntity<Boolean> validateToken(@RequestBody ValidateRequestDto validateRequestDto){
+        Boolean isValid = authService.validateToken(validateRequestDto.getToken(), validateRequestDto.getUserId());
+        return new ResponseEntity<>(isValid, HttpStatus.OK);
     }
 
     private UserDto getUserDto(User user){
