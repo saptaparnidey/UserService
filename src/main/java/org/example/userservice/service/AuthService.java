@@ -1,10 +1,15 @@
 package org.example.userservice.service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtParser;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.MacAlgorithm;
 import org.antlr.v4.runtime.misc.Pair;
+import org.example.userservice.client.KafkaProducerClient;
+import org.example.userservice.dto.SendEmailMessageDto;
+import org.example.userservice.dto.UserDto;
 import org.example.userservice.model.Session;
 import org.example.userservice.model.SessionStatus;
 import org.example.userservice.model.User;
@@ -37,6 +42,12 @@ public class AuthService {
     @Autowired
     private SecretKey secret;
 
+    @Autowired
+    private KafkaProducerClient kafkaProducerClient;
+
+    @Autowired
+    ObjectMapper objectMapper;
+
     public User signUp(String email, String password){
         Optional<User> userOptional = userRepository.findByEmail(email);
 
@@ -47,6 +58,22 @@ public class AuthService {
             User savedUser = userRepository.save(user);
             return savedUser;
         }
+
+//        UserDto userDto = new UserDto();
+//        userDto.setEmail(email);
+        //Put message in a Topic
+        try {
+            SendEmailMessageDto sendEmailMessageDto = new SendEmailMessageDto();
+            sendEmailMessageDto.setTo(email);
+            sendEmailMessageDto.setFrom("admin@scaler.com");
+            sendEmailMessageDto.setSubject("Welcome to Scaler!");
+            sendEmailMessageDto.setBody("Have a Good Learning Experience...");
+            kafkaProducerClient.sendMessage("sendEmail", objectMapper.writeValueAsString(sendEmailMessageDto));
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
+        }
+
+
         return userOptional.get();
     }
 
